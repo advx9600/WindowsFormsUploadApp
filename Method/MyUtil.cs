@@ -15,40 +15,43 @@ namespace WindowsFormsUploadApp.Method
         public static ApkInfo ReadApkInfo(String apkPath)
         {
             //string apkPath = "C:\\Users\\Administrator\\Desktop\\MyModibleAssistant.apk";
-            ICSharpCode.SharpZipLib.Zip.ZipInputStream zip = new ICSharpCode.SharpZipLib.Zip.ZipInputStream(File.OpenRead(apkPath));
-            var filestream = new FileStream(apkPath, FileMode.Open, FileAccess.Read);
-            ICSharpCode.SharpZipLib.Zip.ZipFile zipfile = new ICSharpCode.SharpZipLib.Zip.ZipFile(filestream);
-            ICSharpCode.SharpZipLib.Zip.ZipEntry item;
-
-            byte[] manifestData = null;
-            byte[] resourcesData = null;
-            while ((item = zip.GetNextEntry()) != null)
+            using (ICSharpCode.SharpZipLib.Zip.ZipInputStream zip = new ICSharpCode.SharpZipLib.Zip.ZipInputStream(File.OpenRead(apkPath)))
             {
-                if (item.Name.ToLower() == "androidmanifest.xml")
+                using (var filestream = new FileStream(apkPath, FileMode.Open, FileAccess.Read))
                 {
-                    manifestData = new byte[1024 * 1024*100];
-                    using (Stream strm = zipfile.GetInputStream(item))
-                    {
-                        strm.Read(manifestData, 0, manifestData.Length);
-                    }
+                    ICSharpCode.SharpZipLib.Zip.ZipFile zipfile = new ICSharpCode.SharpZipLib.Zip.ZipFile(filestream);
+                    ICSharpCode.SharpZipLib.Zip.ZipEntry item;
 
-                }
-                if (item.Name.ToLower() == "resources.arsc")
-                {
-                    using (Stream strm = zipfile.GetInputStream(item))
+                    byte[] manifestData = null;
+                    byte[] resourcesData = null;
+                    while ((item = zip.GetNextEntry()) != null)
                     {
-                        using (BinaryReader s = new BinaryReader(strm))
-                        {                            
-                            resourcesData = s.ReadBytes((int)s.BaseStream.Length>0?(int)s.BaseStream.Length:99999999);
+                        if (item.Name.ToLower() == "androidmanifest.xml")
+                        {
+                            manifestData = new byte[1024 * 1024 * 100];
+                            using (Stream strm = zipfile.GetInputStream(item))
+                            {
+                                strm.Read(manifestData, 0, manifestData.Length);
+                            }
+
+                        }
+                        if (item.Name.ToLower() == "resources.arsc")
+                        {
+                            using (Stream strm = zipfile.GetInputStream(item))
+                            {
+                                using (BinaryReader s = new BinaryReader(strm))
+                                {
+                                    resourcesData = s.ReadBytes((int)s.BaseStream.Length > 0 ? (int)s.BaseStream.Length : 99999999);
+                                }
+                            }
                         }
                     }
+                    ApkReader apkReader = new ApkReader();
+                    ApkInfo info = apkReader.extractInfo(manifestData, resourcesData);
+
+                    return info;
                 }
             }
-
-            ApkReader apkReader = new ApkReader();
-            ApkInfo info = apkReader.extractInfo(manifestData, resourcesData);
-
-            return info;
         }
 
 
@@ -89,19 +92,17 @@ namespace WindowsFormsUploadApp.Method
         {
             TbApp app = new TbApp();
 
-            var info = ReadApkInfo(uploadFile);
+            var info = ReadApkInfo(uploadFile);            
             app.Pkg = info.packageName;
             app.VerCode = info.versionCode;
             app.VerName = info.versionName;
 
             app.FileSize = (int)new FileInfo(uploadFile).Length;
-
             String iconPath = Path.Combine(uploadPath, "icon");
             if (!Directory.Exists(iconPath)) Directory.CreateDirectory(iconPath);
             String iconName = DateTime.Now.Ticks + ".png";            
             ExtractFileAndSave(uploadFile, info.iconFileName[info.iconFileName.Count - 1], iconPath, iconName);
-            app.IconPath = Path.Combine(iconPath, iconName);
-
+            app.IconPath = Path.Combine(iconPath, iconName);            
             String newApkName = Path.Combine(uploadPath, board, Path.GetFileName(uploadFile));
             if (File.Exists(newApkName))
                 for (int i = 1; i < 10000; i++)

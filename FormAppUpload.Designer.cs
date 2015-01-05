@@ -86,7 +86,7 @@
             this.textBoxTitile.Location = new System.Drawing.Point(35, 106);
             this.textBoxTitile.Name = "textBoxTitile";
             this.textBoxTitile.Size = new System.Drawing.Size(322, 21);
-            this.textBoxTitile.TabIndex = 6;
+            this.textBoxTitile.TabIndex = 1;
             // 
             // FormAppUpload
             // 
